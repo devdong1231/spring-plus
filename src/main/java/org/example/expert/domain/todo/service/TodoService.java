@@ -7,6 +7,7 @@ import org.example.expert.domain.common.exception.InvalidRequestException;
 import org.example.expert.domain.todo.dto.request.TodoSaveRequest;
 import org.example.expert.domain.todo.dto.response.TodoResponse;
 import org.example.expert.domain.todo.dto.response.TodoSaveResponse;
+import org.example.expert.domain.todo.dto.response.TodoSearchResponse;
 import org.example.expert.domain.todo.entity.Todo;
 import org.example.expert.domain.todo.repository.TodoRepository;
 import org.example.expert.domain.user.dto.response.UserResponse;
@@ -17,14 +18,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class TodoService {
 
     private final TodoRepository todoRepository;
     private final WeatherClient weatherClient;
 
+    @Transactional
     public TodoSaveResponse saveTodo(AuthUser authUser, TodoSaveRequest todoSaveRequest) {
         User user = User.fromAuthUser(authUser);
 
@@ -47,10 +50,17 @@ public class TodoService {
         );
     }
 
-    public Page<TodoResponse> getTodos(int page, int size) {
+    @Transactional(readOnly = true)
+    public Page<TodoResponse> getTodos(
+            int page,
+            int size,
+            String weather,
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    ) {
         Pageable pageable = PageRequest.of(page - 1, size);
 
-        Page<Todo> todos = todoRepository.findAllByOrderByModifiedAtDesc(pageable);
+        Page<Todo> todos = todoRepository.search(weather, startDate, endDate, pageable);
 
         return todos.map(todo -> new TodoResponse(
                 todo.getId(),
@@ -63,9 +73,35 @@ public class TodoService {
         ));
     }
 
+    @Transactional(readOnly = true)
+    public Page<TodoSearchResponse> searchTodos(
+        int page,
+        int size,
+        String keyword,
+        LocalDateTime startDate,
+        LocalDateTime endDate,
+        String managerNickname
+    ) {
+        if (page < 1 || size < 1) {
+            throw new InvalidRequestException("0보다 커야합니다.");
+        }
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new InvalidRequestException("시작일은 끝나는 일 전이여야하빈다.");
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, size);
+        return todoRepository.searchTodos(
+            keyword,
+            startDate,
+            endDate,
+            managerNickname,
+            pageable
+        );
+    }
+    @Transactional(readOnly = true)
     public TodoResponse getTodo(long todoId) {
         Todo todo = todoRepository.findByIdWithUser(todoId)
-                .orElseThrow(() -> new InvalidRequestException("Todo not found"));
+                .orElseThrow(() -> new InvalidRequestException("Todo를 찾을 수 없습니다."));
 
         User user = todo.getUser();
 
