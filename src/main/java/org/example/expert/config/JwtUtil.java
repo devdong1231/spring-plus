@@ -2,7 +2,6 @@ package org.example.expert.config;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -12,9 +11,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.security.Key;
 import java.util.Base64;
 import java.util.Date;
+import javax.crypto.SecretKey;
 
 @Slf4j(topic = "JwtUtil")
 @Component
@@ -25,8 +24,7 @@ public class JwtUtil {
 
     @Value("${jwt.secret.key}")
     private String secretKey;
-    private Key key;
-    private final SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
+    private SecretKey key;
 
     @PostConstruct
     public void init() {
@@ -34,7 +32,7 @@ public class JwtUtil {
         key = Keys.hmacShaKeyFor(bytes);
     }
 
-    public String createToken(Long userId, String email, UserRole userRole) {
+    public String createToken(Long userId, String email, String nickname, UserRole userRole) {
         Date date = new Date();
 
         return BEARER_PREFIX +
