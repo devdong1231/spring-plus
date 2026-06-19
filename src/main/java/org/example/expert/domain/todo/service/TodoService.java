@@ -47,8 +47,14 @@ public class TodoService {
         );
     }
 
-    public Page<TodoResponse> getTodos(int page, int size) {
     @Transactional(readOnly = true)
+    public Page<TodoResponse> getTodos(
+            int page,
+            int size,
+            String weather,
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    ) {
         Pageable pageable = PageRequest.of(page - 1, size);
 
         Page<Todo> todos = todoRepository.findAllByOrderByModifiedAtDesc(pageable);
@@ -64,6 +70,31 @@ public class TodoService {
         ));
     }
 
+    @Transactional(readOnly = true)
+    public Page<TodoSearchResponse> searchTodos(
+        int page,
+        int size,
+        String keyword,
+        LocalDateTime startDate,
+        LocalDateTime endDate,
+        String managerNickname
+    ) {
+        if (page < 1 || size < 1) {
+            throw new InvalidRequestException("0보다 커야합니다.");
+        }
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new InvalidRequestException("시작일은 끝나는 일 전이여야하빈다.");
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, size);
+        return todoRepository.searchTodos(
+            keyword,
+            startDate,
+            endDate,
+            managerNickname,
+            pageable
+        );
+    }
     @Transactional(readOnly = true)
     public TodoResponse getTodo(long todoId) {
         Todo todo = todoRepository.findByIdWithUser(todoId)
